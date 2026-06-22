@@ -1,17 +1,10 @@
 "use client";
 
 /**
- * Particle Auth Provider — definitive implementation.
+ * Particle Auth Provider — initializes the SDK with chains before rendering.
  *
- * Fixes all three root causes:
- * 1. chains was empty [] → now [ARBITRUM_ONE] (non-empty, correct viem shape)
- * 2. Was mixing auth-core + auth-core-modal → only auth-core-modal now
- * 3. Async init timing → Provider is rendered synchronously on first paint
- *    via a dynamic import at the module level (not inside useEffect)
- *
- * Design: We use Next.js dynamic() with ssr:false to load the Provider
- * only on the client, avoiding SSR issues, while keeping it in the React
- * tree from the very first client render.
+ * The AuthCoreContextProvider doesn't pass chains to the internal particleAuth.init(),
+ * so we need to initialize it manually first.
  */
 
 import React, { createContext, useContext, useState, useEffect } from "react";
@@ -22,9 +15,7 @@ interface ParticleReadyCtx { ready: boolean }
 const Ctx = createContext<ParticleReadyCtx>({ ready: false });
 export const useParticleReady = () => useContext(Ctx);
 
-/* ── viem-compatible Arbitrum One ────────────────────────────────────────────
- * FIX #1: chains MUST be a non-empty tuple [ViemChain, ...ViemChain[]]
- * ─────────────────────────────────────────────────────────────────────────── */
+/* ── viem-compatible Arbitrum One ──────────────────────────────────────────── */
 export const ARBITRUM_ONE = {
   id: 42161,
   name: "Arbitrum One",
@@ -39,7 +30,7 @@ export const ARBITRUM_ONE = {
   },
 } as const;
 
-/* ── Particle options (shared between provider and any direct SDK calls) ──── */
+/* ── Particle options for AuthCoreContextProvider ──────────────────────────── */
 export const PARTICLE_OPTIONS = {
   projectId: config.particle.projectId,
   clientKey: config.particle.clientKey,
@@ -54,21 +45,14 @@ export const PARTICLE_OPTIONS = {
   },
 };
 
-/* ── Live provider: loads auth-core-modal on client ──────────────────────────
- * FIX #2: uses AuthCoreContextProvider from auth-core-modal (NOT auth-core)
- * FIX #3: loads synchronously on first client render using module-level cache
- * ─────────────────────────────────────────────────────────────────────────── */
+/* ── Live provider: initializes SDK with chains, then renders modal ────────── */
 
-// Module-level cache — populated once, never changes
 let _ProviderCache: React.ComponentType<{ options: any; children: React.ReactNode }> | null | "loading" = "loading";
 
 function tryLoadProvider(): React.ComponentType<{ options: any; children: React.ReactNode }> | null {
   if (_ProviderCache !== "loading") return _ProviderCache;
   try {
-    // eslint-disable-next-line no-new-func, @typescript-eslint/no-require-imports
     const mod = new Function("m", "return require(m)")("@particle-network/auth-core-modal");
-    // FIX #2: AuthCoreContextProvider is the high-level provider from auth-core-modal
-    // It handles OTP UI, captcha, session management — auth-core alone does NOT
     _ProviderCache =
       mod?.AuthCoreContextProvider ??
       mod?.default?.AuthCoreContextProvider ??
@@ -80,35 +64,42 @@ function tryLoadProvider(): React.ComponentType<{ options: any; children: React.
 }
 
 function LiveProvider({ children }: { children: React.ReactNode }) {
-  // FIX #3: try to get the provider synchronously (module-level cache)
-  // This means on first render we already have the Provider — no flash
   const [Provider, setProvider] = useState<React.ComponentType<{ options: any; children: React.ReactNode }> | null>(
     () => tryLoadProvider()
   );
-  const [ready, setReady] = useState(Provider !== null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (Provider) { setReady(true); return; }
-    // Fallback: if require wasn't available on first render (SSR edge case),
-    // try again after hydration
-    const p = tryLoadProvider();
-    if (p) {
-      setProvider(() => p);
-      setReady(true);
-    } else {
-      // SDK not installed — still mark ready so UI isn't permanently blocked
-      console.warn(
-        "[OneShot] @particle-network/auth-core-modal not found. " +
-        "Live auth unavailable. Set NEXT_PUBLIC_MOCK_MODE=true for demo mode."
-      );
-      setReady(true);
-    }
-  }, [Provider]);
+    // Initialize particleAuth with chains BEFORE the provider renders
+    const initSDK = async () => {
+      try {
+        const authCore = new Function("m", "return require(m)")("@particle-network/auth-core");
+        if (authCore?.particleAuth) {
+          authCore.particleAuth.init({
+            projectId: config.particle.projectId,
+            clientKey: config.particle.clientKey,
+            appId: config.particle.appId,
+            chains: [ARBITRUM_ONE] as any,
+          });
+        }
+      } catch (err) {
+        console.warn("[OneShot] Failed to initialize particleAuth with chains:", err);
+      }
 
-  if (!Provider) {
-    // SDK unavailable — render children without Particle wrapper
+      // Now load the provider
+      const p = tryLoadProvider();
+      if (p) {
+        setProvider(() => p);
+      }
+      setReady(true);
+    };
+
+    initSDK();
+  }, []);
+
+  if (!Provider || !ready) {
     return (
-      <Ctx.Provider value={{ ready }}>
+      <Ctx.Provider value={{ ready: false }}>
         {children}
       </Ctx.Provider>
     );
