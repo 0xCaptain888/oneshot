@@ -47,34 +47,18 @@ export const PARTICLE_OPTIONS = {
 
 /* ── Live provider: initializes SDK with chains, then renders modal ────────── */
 
-let _ProviderCache: React.ComponentType<{ options: any; children: React.ReactNode }> | null | "loading" = "loading";
-
-function tryLoadProvider(): React.ComponentType<{ options: any; children: React.ReactNode }> | null {
-  if (_ProviderCache !== "loading") return _ProviderCache;
-  try {
-    const mod = new Function("m", "return require(m)")("@particle-network/auth-core-modal");
-    _ProviderCache =
-      mod?.AuthCoreContextProvider ??
-      mod?.default?.AuthCoreContextProvider ??
-      null;
-  } catch {
-    _ProviderCache = null;
-  }
-  return _ProviderCache === "loading" ? null : _ProviderCache;
-}
-
 function LiveProvider({ children }: { children: React.ReactNode }) {
-  const [Provider, setProvider] = useState<React.ComponentType<{ options: any; children: React.ReactNode }> | null>(
-    () => tryLoadProvider()
-  );
+  const [Provider, setProvider] = useState<React.ComponentType<{ options: any; children: React.ReactNode }> | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Initialize particleAuth with chains BEFORE the provider renders
+    let mounted = true;
+
     const initSDK = async () => {
       try {
-        const authCore = new Function("m", "return require(m)")("@particle-network/auth-core");
-        if (authCore?.particleAuth) {
+        // Initialize particleAuth with chains using dynamic import
+        const authCore = await import("@particle-network/auth-core");
+        if (authCore?.particleAuth && mounted) {
           authCore.particleAuth.init({
             projectId: config.particle.projectId,
             clientKey: config.particle.clientKey,
@@ -82,19 +66,29 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
             chains: [ARBITRUM_ONE] as any,
           });
         }
+
+        // Now load the modal provider
+        const modalMod = await import("@particle-network/auth-core-modal");
+        if (mounted) {
+          const ModalProvider = modalMod?.AuthCoreContextProvider ?? modalMod?.default?.AuthCoreContextProvider;
+          if (ModalProvider) {
+            setProvider(() => ModalProvider);
+          }
+        }
       } catch (err) {
-        console.warn("[OneShot] Failed to initialize particleAuth with chains:", err);
+        console.warn("[OneShot] Failed to initialize Particle SDK:", err);
       }
 
-      // Now load the provider
-      const p = tryLoadProvider();
-      if (p) {
-        setProvider(() => p);
+      if (mounted) {
+        setReady(true);
       }
-      setReady(true);
     };
 
     initSDK();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   if (!Provider || !ready) {

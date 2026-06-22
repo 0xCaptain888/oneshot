@@ -13,51 +13,8 @@ import { useCallback, useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { useParticleReady } from "@/lib/particle/authProvider";
 import { Button, Spinner } from "@/components/ui";
+import { useConnect, useUserInfo } from "@particle-network/auth-core-modal";
 import type { Address } from "@/types";
-
-/* ── Hook loader ───────────────────────────────────────────────────────────── */
-
-type ConnectFn = (opts: { email?: string; code?: string; phone?: string; socialType?: string }) => Promise<any>;
-type RequestCaptchaFn = (config: { email: string } | { phone: string }) => Promise<boolean>;
-type DisconnectFn = () => Promise<void>;
-
-interface ParticleHooks {
-  useConnect: () => {
-    connect: ConnectFn;
-    disconnect: DisconnectFn;
-    requestConnectCaptcha: RequestCaptchaFn;
-  };
-  useUserInfo: () => { userInfo: Record<string, any> | null | undefined };
-}
-
-const noopHooks: ParticleHooks = {
-  useConnect: () => ({
-    connect: async () => null,
-    disconnect: async () => {},
-    requestConnectCaptcha: async () => false,
-  }),
-  useUserInfo: () => ({ userInfo: null }),
-};
-
-function loadParticleHooks(): ParticleHooks {
-  try {
-    const mod = new Function("m", "return require(m)")("@particle-network/auth-core-modal");
-    if (!mod) return noopHooks;
-
-    const useConnect = mod.useConnect ?? mod.default?.useConnect;
-    const useUserInfo = mod.useUserInfo ?? mod.default?.useUserInfo;
-
-    if (typeof useConnect !== "function" || typeof useUserInfo !== "function") {
-      console.warn("[OneShot] Particle hooks not found in auth-core-modal.");
-      return noopHooks;
-    }
-    return { useConnect, useUserInfo };
-  } catch {
-    return noopHooks;
-  }
-}
-
-const particleHooks = loadParticleHooks();
 
 /* ── Component ────────────────────────────────────────────────────────────── */
 
@@ -72,8 +29,8 @@ interface Props {
 export function ParticleLoginButton({
   email, onSuccess, onError, loading, setLoading,
 }: Props) {
-  const { connect, disconnect: _disconnect, requestConnectCaptcha } = particleHooks.useConnect();
-  const { userInfo } = particleHooks.useUserInfo();
+  const { connect, disconnect: _disconnect, requestConnectCaptcha } = useConnect();
+  const { userInfo } = useUserInfo();
   const { ready } = useParticleReady();
 
   const [step, setStep] = useState<"email" | "otp">("email");
@@ -208,6 +165,6 @@ export function ParticleLoginButton({
 
 /** Logout hook — also at top level, per React rules */
 export function useParticleDisconnect() {
-  const { disconnect } = particleHooks.useConnect();
+  const { disconnect } = useConnect();
   return disconnect;
 }
