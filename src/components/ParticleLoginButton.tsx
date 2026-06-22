@@ -130,44 +130,37 @@ export function ParticleLoginButton({
         email: email.trim(),
         code,
       });
-      console.log("[OneShot] connect() result:", JSON.stringify(result, null, 2));
+      console.log("[OneShot] connect() result:", result);
+      console.log("[OneShot] connect() result keys:", result ? Object.keys(result) : "null");
+      console.log("[OneShot] connect() wallets:", result?.wallets);
       
       // Try to extract address from connect() return value
       let addr: string = "";
-      if (result) {
-        addr = result.wallets?.[0]?.public_address ?? "";
-        console.log("[OneShot] Address from connect():", addr);
+      if (result?.wallets && Array.isArray(result.wallets) && result.wallets.length > 0) {
+        addr = result.wallets[0].public_address ?? "";
+        console.log("[OneShot] Address from connect() wallets:", addr);
       }
       
-      // If no address from connect(), try to get it from userInfo or getUserInfo
+      // If no address from connect(), try getUserInfo from auth-core
       if (!addr) {
-        console.log("[OneShot] No address from connect(), trying userInfo...");
-        // Wait a bit for userInfo to update
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log("[OneShot] No address from connect(), trying getUserInfo()...");
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Try userInfo from hook
-        if (userInfo) {
-          addr = userInfo.wallets?.[0]?.public_address ?? "";
-          console.log("[OneShot] Got address from userInfo:", addr);
-          console.log("[OneShot] userInfo structure:", JSON.stringify(userInfo, null, 2));
-        } else {
-          console.log("[OneShot] userInfo is null/undefined");
-        }
-        
-        // If still no address, try getUserInfo from auth-core
-        if (!addr) {
-          try {
-            console.log("[OneShot] Trying getUserInfo from auth-core...");
-            const { getUserInfo } = await import("@particle-network/auth-core");
-            const info = getUserInfo();
-            console.log("[OneShot] getUserInfo() result:", JSON.stringify(info, null, 2));
-            if (info) {
-              addr = info.wallets?.[0]?.public_address ?? "";
-              console.log("[OneShot] Got address from getUserInfo():", addr);
-            }
-          } catch (e) {
-            console.error("[OneShot] Failed to get userInfo from auth-core:", e);
+        try {
+          const { getUserInfo, isConnected } = await import("@particle-network/auth-core");
+          console.log("[OneShot] isConnected:", isConnected());
+          
+          const info = getUserInfo();
+          console.log("[OneShot] getUserInfo() result:", info);
+          console.log("[OneShot] getUserInfo() keys:", info ? Object.keys(info) : "null");
+          console.log("[OneShot] getUserInfo() wallets:", info?.wallets);
+          
+          if (info?.wallets && Array.isArray(info.wallets) && info.wallets.length > 0) {
+            addr = info.wallets[0].public_address ?? "";
+            console.log("[OneShot] Got address from getUserInfo():", addr);
           }
+        } catch (e) {
+          console.error("[OneShot] Failed to get userInfo from auth-core:", e);
         }
       }
       
