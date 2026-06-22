@@ -44,7 +44,6 @@ export const PARTICLE_OPTIONS = {
   projectId: config.particle.projectId,
   clientKey: config.particle.clientKey,
   appId:     config.particle.appId,
-  chains:    [ARBITRUM_ONE] as any[],   // FIX #1: non-empty, correct viem shape
   authTypes: ["email"] as string[],
   themeType: "dark" as const,
   fiatCoin:  "USD",
