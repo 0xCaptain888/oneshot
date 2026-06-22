@@ -15,7 +15,7 @@ import { ArrowRight, Mail } from "lucide-react";
 import { useParticleReady } from "@/lib/particle/authProvider";
 import { Button, Spinner } from "@/components/ui";
 import type { Address } from "@/types";
-import { useConnect, useUserInfo } from "@particle-network/auth-core-modal";
+import { useConnect, useUserInfo, useEthereum } from "@particle-network/auth-core-modal";
 import { useStore } from "@/lib/store";
 
 /* ── Component ───────────────────────────────────────────────────────────── */
@@ -37,6 +37,7 @@ export function ParticleLoginButton({
   const { connect, requestConnectCaptcha } = useConnect();
   const { userInfo } = useUserInfo();
   const { ready } = useParticleReady();
+  const { address: ethAddress } = useEthereum();
   const connected = useStore((s) => s.connected);
 
   const [step, setStep]   = useState<Step>("email");
@@ -131,29 +132,27 @@ export function ParticleLoginButton({
         code,
       });
       console.log("[OneShot] connect() result:", result);
-      console.log("[OneShot] connect() result keys:", result ? Object.keys(result) : "null");
-      console.log("[OneShot] connect() wallets:", result?.wallets);
       
-      // Try to extract address from connect() return value
-      let addr: string = "";
-      if (result?.wallets && Array.isArray(result.wallets) && result.wallets.length > 0) {
+      // Wait a bit for ethereum provider to be ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Try to get address from useEthereum hook first
+      let addr: string = ethAddress ?? "";
+      console.log("[OneShot] Address from useEthereum:", addr);
+      
+      // If no address from useEthereum, try userInfo
+      if (!addr && result?.wallets && Array.isArray(result.wallets) && result.wallets.length > 0) {
         addr = result.wallets[0].public_address ?? "";
         console.log("[OneShot] Address from connect() wallets:", addr);
       }
       
-      // If no address from connect(), try getUserInfo from auth-core
+      // If still no address, try getUserInfo from auth-core
       if (!addr) {
-        console.log("[OneShot] No address from connect(), trying getUserInfo()...");
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
+        console.log("[OneShot] No address from useEthereum, trying getUserInfo()...");
         try {
-          const { getUserInfo, isConnected } = await import("@particle-network/auth-core");
-          console.log("[OneShot] isConnected:", isConnected());
-          
+          const { getUserInfo } = await import("@particle-network/auth-core");
           const info = getUserInfo();
           console.log("[OneShot] getUserInfo() result:", info);
-          console.log("[OneShot] getUserInfo() keys:", info ? Object.keys(info) : "null");
-          console.log("[OneShot] getUserInfo() wallets:", info?.wallets);
           
           if (info?.wallets && Array.isArray(info.wallets) && info.wallets.length > 0) {
             addr = info.wallets[0].public_address ?? "";
@@ -190,7 +189,7 @@ export function ParticleLoginButton({
         onError(msg || "Verification failed. Please try again.");
       }
     }
-  }, [email, otp, connect, userInfo, setLoading, onError, onSuccess]);
+  }, [email, otp, connect, userInfo, ethAddress, setLoading, onError, onSuccess]);
 
   const handleResend = useCallback(async () => {
     setOtp("");
