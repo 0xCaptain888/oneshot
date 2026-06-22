@@ -117,19 +117,34 @@ export function ParticleLoginButton({
         code,
       });
       console.log("[OneShot] connect() result:", result);
-      // Try to extract address from connect() return value directly
-      const addr: string =
-        result?.wallet?.public_address          ??
-        result?.wallets?.[0]?.public_address    ??
-        result?.evm_address                     ??
-        result?.address                         ??
-        "";
+      
+      // Try to extract address from connect() return value
+      let addr: string = "";
+      if (result) {
+        addr = result.wallets?.[0]?.public_address ?? "";
+      }
+      
+      // If no address from connect(), wait for userInfo to update
+      if (!addr) {
+        console.log("[OneShot] No address from connect(), waiting for userInfo...");
+        // Wait a bit for userInfo to update
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        if (userInfo) {
+          addr = userInfo.wallets?.[0]?.public_address ?? "";
+          console.log("[OneShot] Got address from userInfo:", addr);
+        }
+      }
+      
       if (addr) {
         setLoading(false);
         setStep("email");
         onSuccess(addr as Address);
+      } else {
+        console.error("[OneShot] Failed to get address after login");
+        setStep("otp");
+        setLoading(false);
+        onError("Login successful but failed to get wallet address. Please try again.");
       }
-      // If addr is empty, fall back to useEffect watching userInfo
     } catch (e: any) {
       setStep("otp");
       setLoading(false);
@@ -144,7 +159,7 @@ export function ParticleLoginButton({
         onError(msg || "Verification failed. Please try again.");
       }
     }
-  }, [email, otp, connect, setLoading, onError, onSuccess]);
+  }, [email, otp, connect, userInfo, setLoading, onError, onSuccess]);
 
   const handleResend = useCallback(async () => {
     setOtp("");
