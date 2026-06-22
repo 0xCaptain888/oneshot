@@ -1,4 +1,10 @@
 /** @type {import('next').NextConfig} */
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const nextConfig = {
   reactStrictMode: true,
 
@@ -25,11 +31,10 @@ const nextConfig = {
     if (!isServer) {
       // Provide a stub for `fs` so Particle SDK's `fs.promises` destructuring
       // doesn't crash in the browser (writeFile, readFile, etc.).
-      config.plugins.push(
-        new webpack.NormalModuleReplacementPlugin(/^fs$/, (resource) => {
-          resource.request = require.resolve("./src/lib/fs-stub.js");
-        })
-      );
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        fs: path.resolve(__dirname, "./src/lib/fs-stub.js"),
+      };
 
       // Map other Node core modules to false in the browser bundle.
       config.resolve.fallback = {
