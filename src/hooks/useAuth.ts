@@ -50,9 +50,14 @@ export function useAuth() {
   }, [setAuth]);
 
   const logout = useCallback(async () => {
+    console.log("[OneShot] Logout function called");
+    if (typeof window !== 'undefined') {
+      console.log("[OneShot] Window is available");
+    }
     if (!IS_MOCK) {
       // Import and call Particle disconnect imperatively (not a hook call)
       try {
+        console.log("[OneShot] Importing Particle disconnect...");
         const { disconnect: particleDisconnect } = await import("@particle-network/auth-core");
         console.log("[OneShot] Calling Particle disconnect...");
         await particleDisconnect();
@@ -63,6 +68,7 @@ export function useAuth() {
     }
     console.log("[OneShot] Clearing Zustand state...");
     disconnect();
+    console.log("[OneShot] Logout completed");
   }, [disconnect]);
 
   return {
