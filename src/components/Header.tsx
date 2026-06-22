@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui";
 
 export function Header() {
   const connected = useStore((s) => s.connected);
-  const email = useStore((s) => s.email);
-  const address = useStore((s) => s.address);
+  const email     = useStore((s) => s.email);
+  const address   = useStore((s) => s.address);
   const { logout } = useAuth();
 
   return (

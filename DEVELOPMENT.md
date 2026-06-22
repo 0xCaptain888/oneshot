@@ -1,6 +1,6 @@
 # OneShot — 完整开发文档 v3.0
 
-> 最后更新：2026-06-22  
+> 最后更新：2026-06-21  
 > 版本：v3.0（Bug 修复版）  
 > 部署：https://oneshot-seven-inky.vercel.app  
 > GitHub：https://github.com/0xCaptain888/oneshot  
@@ -68,7 +68,7 @@ src/
 NEXT_PUBLIC_PARTICLE_PROJECT_ID = 3b1fc10f-b2ea-48dc-ad62-6b20b2264fe0
 NEXT_PUBLIC_PARTICLE_CLIENT_KEY = crwCy0oYSHQzQnY6WNQRwGz9UO6bEI4e5l3z4yl1
 NEXT_PUBLIC_PARTICLE_APP_ID    = 12039a72-9e05-4f0a-a949-57dd2ec46db7
-DEEPSEEK_API_KEY               = your_deepseek_api_key_here
+DEEPSEEK_API_KEY               = sk-your-deepseek-api-key
 NEXT_PUBLIC_APP_URL            = https://oneshot-seven-inky.vercel.app
 ```
 
@@ -242,21 +242,12 @@ await connectFn({ socialType: "email", email });
 
 ## 6. DeepSeek V4 Agent
 
-- API Key: `your_deepseek_api_key_here`（在 Vercel 环境变量中设置真实值）
+- API Key: `sk-your-deepseek-api-key`
 - 端点: `https://api.deepseek.com/v1/chat/completions`
 - 模型: `deepseek-chat`
 - 在 Vercel 环境变量设置 `DEEPSEEK_API_KEY`
 
 Agent 安全架构：规则引擎决策 → DeepSeek 只负责自然语言解释，不产生新动作。
-
-### 工作原理
-
-1. 规则引擎（`src/lib/agent/rules.ts`）根据仓位状态生成动作列表
-2. API 路由（`src/app/api/agent/route.ts`）将动作列表发送给 DeepSeek
-3. DeepSeek 返回 2-3 句自然语言总结
-4. 前端显示总结，标记为 "LLM-explained"
-
-如果没有设置 `DEEPSEEK_API_KEY`，系统会使用规则引擎的内置总结，标记为 "rules engine"。
 
 ---
 
@@ -280,20 +271,13 @@ Agent 安全架构：规则引擎决策 → DeepSeek 只负责自然语言解释
 
 ## 9. Hackathon 提交清单
 
-- [x] GitHub 仓库：https://github.com/0xCaptain888/oneshot
-- [x] Vercel 部署（3 个 URL）
+- [x] GitHub 仓库
+- [x] Vercel 部署
 - [x] Mock 模式完整演示
 - [x] 三个 magic moment 可运行
 - [x] DeepSeek V4 Agent
-- [x] 所有已知 Bug 修复（v3.0）
+- [x] 所有已知 Bug 修复
 - [ ] Vercel 设置真实环境变量
 - [ ] Particle Dashboard 配置域名
 - [ ] Hackathon Deck
 - [ ] 提交表单
-
-### 演示信息
-
-- **演示邮箱**：silveriobradley5@gmail.com
-- **Particle Project ID**：3b1fc10f-b2ea-48dc-ad62-6b20b2264fe0
-- **Particle Client Key**：crwCy0oYSHQzQnY6WNQRwGz9UO6bEI4e5l3z4yl1
-- **Particle App ID**：12039a72-9e05-4f0a-a949-57dd2ec46db7

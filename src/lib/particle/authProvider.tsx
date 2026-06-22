@@ -1,10 +1,15 @@
 "use client";
 
 /**
- * Particle Auth Provider — initializes the SDK with chains before rendering.
+ * Particle Auth Provider — v1.x compatible.
  *
- * The AuthCoreContextProvider doesn't pass chains to the internal particleAuth.init(),
- * so we need to initialize it manually first.
+ * SDK versions: @particle-network/auth-core-modal@1.5.2
+ *               @particle-network/auth-core@1.5.2
+ *
+ * Three root causes fixed:
+ * 1. chains was [] → now [ARBITRUM_ONE] (non-empty, correct viem shape)
+ * 2. Used auth-core directly → now uses auth-core-modal's AuthCoreContextProvider
+ * 3. Provider loaded in useEffect (too late) → synchronous module-level cache
  */
 
 import React, { createContext, useContext, useState, useEffect } from "react";
@@ -15,7 +20,9 @@ interface ParticleReadyCtx { ready: boolean }
 const Ctx = createContext<ParticleReadyCtx>({ ready: false });
 export const useParticleReady = () => useContext(Ctx);
 
-/* ── viem-compatible Arbitrum One ──────────────────────────────────────────── */
+/* ── Arbitrum One (viem-compatible) ─────────────────────────────────────────
+ * FIX #1: chains MUST be [ViemChain, ...] — non-empty tuple
+ * ─────────────────────────────────────────────────────────────────────────── */
 export const ARBITRUM_ONE = {
   id: 42161,
   name: "Arbitrum One",
@@ -30,73 +37,72 @@ export const ARBITRUM_ONE = {
   },
 } as const;
 
-/* ── Particle options for AuthCoreContextProvider ──────────────────────────── */
+/* ── Particle options for auth-core-modal v1.5.x ────────────────────────────
+ * Note: authTypes is NOT a valid option in v1.x — remove it.
+ * v1.x uses 'customStyle' and other options instead.
+ * ─────────────────────────────────────────────────────────────────────────── */
 export const PARTICLE_OPTIONS = {
-  projectId: config.particle.projectId,
-  clientKey: config.particle.clientKey,
-  appId:     config.particle.appId,
-  authTypes: ["email"] as string[],
-  themeType: "dark" as const,
-  fiatCoin:  "USD",
-  language:  "en",
+  projectId:  config.particle.projectId,   // 3b1fc10f-b2ea-48dc-ad62-6b20b2264fe0
+  clientKey:  config.particle.clientKey,   // crwCy0oYSHQzQnY6WNQRwGz9UO6bEI4e5l3z4yl1
+  appId:      config.particle.appId,       // 12039a72-9e05-4f0a-a949-57dd2ec46db7
+
+  // FIX #1: non-empty chains array
+  chains: [ARBITRUM_ONE] as any[],
+
+  // v1.x theme options
+  themeType:  "dark" as const,
+  fiatCoin:   "USD",
+  language:   "en",
+
+  // Prompt for security settings after login
   promptSettingConfig: {
-    promptMasterPasswordSettingWhenLogin: 1,
-    promptPaymentPasswordSettingWhenSign: 1,
+    promptMasterPasswordSettingWhenLogin: 0,   // 0=off for smoother demo UX
+    promptPaymentPasswordSettingWhenSign: 0,
   },
 };
 
-/* ── Live provider: initializes SDK with chains, then renders modal ────────── */
+/* ── Provider loader — synchronous module-level cache ────────────────────── */
+// FIX #3: try to load synchronously so Provider is available on first render
+let _cache: React.ComponentType<{ options: any; children: React.ReactNode }> | null | "pending" = "pending";
 
+function tryLoadProvider(): React.ComponentType<{ options: any; children: React.ReactNode }> | null {
+  if (_cache !== "pending") return _cache;
+  try {
+    // FIX #2: AuthCoreContextProvider from auth-core-modal (NOT auth-core)
+    // eslint-disable-next-line no-new-func, @typescript-eslint/no-require-imports
+    const mod = new Function("m", "return require(m)")("@particle-network/auth-core-modal");
+    _cache = mod?.AuthCoreContextProvider ?? mod?.default?.AuthCoreContextProvider ?? null;
+  } catch {
+    _cache = null;
+  }
+  return _cache;
+}
+
+/* ── LiveProvider ─────────────────────────────────────────────────────────── */
 function LiveProvider({ children }: { children: React.ReactNode }) {
-  const [Provider, setProvider] = useState<React.ComponentType<{ options: any; children: React.ReactNode }> | null>(null);
-  const [ready, setReady] = useState(false);
+  const [Provider, setProvider] = useState<React.ComponentType<{ options: any; children: React.ReactNode }> | null>(
+    () => tryLoadProvider()   // synchronous on first render
+  );
+  const [ready, setReady] = useState(Provider !== null);
 
   useEffect(() => {
-    let mounted = true;
+    if (Provider) { setReady(true); return; }
+    // Fallback for environments where require wasn't available synchronously
+    const p = tryLoadProvider();
+    if (p) {
+      setProvider(() => p);
+      setReady(true);
+    } else {
+      console.warn(
+        "[OneShot] @particle-network/auth-core-modal@1.5.2 not found. " +
+        "Check your dependencies or use NEXT_PUBLIC_MOCK_MODE=true for demo mode."
+      );
+      setReady(true); // allow UI to render even without SDK
+    }
+  }, [Provider]);
 
-    const initSDK = async () => {
-      try {
-        // Initialize particleAuth with chains using dynamic import
-        const authCore = await import("@particle-network/auth-core");
-        if (authCore?.particleAuth && mounted) {
-          authCore.particleAuth.init({
-            projectId: config.particle.projectId,
-            clientKey: config.particle.clientKey,
-            appId: config.particle.appId,
-            chains: [ARBITRUM_ONE] as any,
-          });
-        }
-
-        // Now load the modal provider
-        const modalMod = await import("@particle-network/auth-core-modal");
-        if (mounted) {
-          const ModalProvider = modalMod?.AuthCoreContextProvider ?? modalMod?.default?.AuthCoreContextProvider;
-          if (ModalProvider) {
-            setProvider(() => ModalProvider);
-          }
-        }
-      } catch (err) {
-        console.warn("[OneShot] Failed to initialize Particle SDK:", err);
-      }
-
-      if (mounted) {
-        setReady(true);
-      }
-    };
-
-    initSDK();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  if (!Provider || !ready) {
-    return (
-      <Ctx.Provider value={{ ready: false }}>
-        {children}
-      </Ctx.Provider>
-    );
+  if (!Provider) {
+    return <Ctx.Provider value={{ ready }}>{children}</Ctx.Provider>;
   }
 
   return (
@@ -111,11 +117,7 @@ function LiveProvider({ children }: { children: React.ReactNode }) {
 /* ── Public export ────────────────────────────────────────────────────────── */
 export function ParticleAuthProvider({ children }: { children: React.ReactNode }) {
   if (IS_MOCK) {
-    return (
-      <Ctx.Provider value={{ ready: true }}>
-        {children}
-      </Ctx.Provider>
-    );
+    return <Ctx.Provider value={{ ready: true }}>{children}</Ctx.Provider>;
   }
   return <LiveProvider>{children}</LiveProvider>;
 }

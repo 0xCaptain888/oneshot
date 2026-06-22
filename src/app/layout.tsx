@@ -29,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={inter.variable}>
       <body className="app-bg min-h-screen font-sans antialiased">
+        {/* ParticleAuthProvider wraps app so Particle hooks work at component level */}
         <ParticleAuthProvider>
           {children}
         </ParticleAuthProvider>
