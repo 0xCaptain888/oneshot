@@ -18,7 +18,7 @@
 
 <br />
 
-[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-oneshot--seven--inky.vercel.app-7C5CFF?style=for-the-badge)](https://oneshot-seven-inky.vercel.app)
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-oneshot--adgssky5l-0xcaptain888s--projects.vercel.app-7C5CFF?style=for-the-badge)](https://oneshot-adgssky5l-0xcaptain888s-projects.vercel.app)
 &nbsp;
 [![Try Mock Mode](https://img.shields.io/badge/🎮_Try_Mock_Mode-No_wallet_needed-19C2B6?style=for-the-badge)](https://oneshot-adgssky5l-0xcaptain888s-projects.vercel.app)
 
@@ -208,6 +208,6 @@ MIT — see [LICENSE](./LICENSE)
 
 Built with ❤️ for the [UXmaxx Hackathon](https://www.encodeclub.com/programmes/uxmaxx-hackathon) · 7702 Collective · Particle Network
 
-**[Live Demo](https://oneshot-seven-inky.vercel.app) · [Mock Demo](https://oneshot-adgssky5l-0xcaptain888s-projects.vercel.app) · [Docs](./DEVELOPMENT.md)**
+**[Live Demo](https://oneshot-adgssky5l-0xcaptain888s-projects.vercel.app) · [Mock Demo](https://oneshot-adgssky5l-0xcaptain888s-projects.vercel.app) · [Docs](./DEVELOPMENT.md)**
 
 </div>
