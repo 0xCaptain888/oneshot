@@ -1,9 +1,6 @@
 /**
  * LIVE adapter — Particle Universal Accounts.
  *
- * Uses new Function() to load the SDK so TypeScript never statically resolves
- * the module (bypasses Particle SDK's broken package.json exports field).
- *
  * Project ID : 3b1fc10f-b2ea-48dc-ad62-6b20b2264fe0
  * Client Key : crwCy0oYSHQzQnY6WNQRwGz9UO6bEI4e5l3z4yl1
  * App ID     : 12039a72-9e05-4f0a-a949-57dd2ec46db7
@@ -13,15 +10,8 @@ import type { Address, Position, Side, TxStep, UnifiedBalance } from "@/types";
 import type { UniversalAccountService, StepCallback } from "./universalAccount";
 import { config } from "@/config";
 import { uid } from "@/lib/utils";
-
-function opaqueRequire(m: string): any {
-  try {
-    // eslint-disable-next-line no-new-func
-    return new Function("m", "return require(m)")(m);
-  } catch {
-    return null;
-  }
-}
+// @ts-ignore — Particle SDK has broken package.json exports field
+import { UniversalAccount } from "@particle-network/universal-account-sdk";
 
 export class LiveUniversalAccount implements UniversalAccountService {
   private address: Address | null;
@@ -33,11 +23,7 @@ export class LiveUniversalAccount implements UniversalAccountService {
 
   private async init(): Promise<any> {
     if (this.ua) return this.ua;
-    const sdk = opaqueRequire("@particle-network/universal-account-sdk");
-    if (!sdk) throw new Error("Particle SDK not found. npm install @particle-network/universal-account-sdk");
-    const UA = sdk.UniversalAccount ?? sdk.default?.UniversalAccount ?? sdk.default;
-    if (!UA) throw new Error("UniversalAccount class not found in Particle SDK.");
-    this.ua = new UA({
+    this.ua = new UniversalAccount({
       projectId: config.particle.projectId,
       clientKey: config.particle.clientKey,
       appId: config.particle.appId,

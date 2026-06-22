@@ -16,21 +16,8 @@
 
 import React from "react";
 import { IS_MOCK, config } from "@/config";
-
-function opaqueRequire(m: string): any {
-  try {
-    // eslint-disable-next-line no-new-func
-    return new Function("m", "return require(m)")(m);
-  } catch {
-    return null;
-  }
-}
-
-/** Lazily get the AuthCoreContextProvider component from the Particle SDK. */
-function getParticleProvider(): React.ComponentType<{ options: any; children: React.ReactNode }> | null {
-  const mod = opaqueRequire("@particle-network/auth-core-modal");
-  return mod?.AuthCoreContextProvider ?? mod?.default?.AuthCoreContextProvider ?? null;
-}
+// @ts-ignore — Particle SDK has broken package.json exports field
+import { AuthCoreContextProvider } from "@particle-network/auth-core-modal";
 
 /** Arbitrum One chain definition for Particle SDK */
 const ARBITRUM_ONE = {
@@ -48,18 +35,8 @@ export function ParticleAuthProvider({ children }: { children: React.ReactNode }
     return <>{children}</>;
   }
 
-  const Provider = getParticleProvider();
-  if (!Provider) {
-    // SDK not installed yet — passthrough gracefully
-    console.warn(
-      "OneShot: @particle-network/auth-core-modal not found. " +
-      "Running without Particle Auth. Install it or set NEXT_PUBLIC_MOCK_MODE=true."
-    );
-    return <>{children}</>;
-  }
-
   return (
-    <Provider
+    <AuthCoreContextProvider
       options={{
         projectId: config.particle.projectId,
         clientKey: config.particle.clientKey,
@@ -76,6 +53,6 @@ export function ParticleAuthProvider({ children }: { children: React.ReactNode }
       }}
     >
       {children}
-    </Provider>
+    </AuthCoreContextProvider>
   );
 }
