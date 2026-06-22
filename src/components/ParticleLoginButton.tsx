@@ -45,13 +45,18 @@ export function ParticleLoginButton({
   useEffect(() => {
     console.log("[OneShot] userInfo updated:", userInfo);
     if (!userInfo) return;
+    
+    // Extract address from userInfo
     const addr: string =
-      (userInfo as any).wallet?.public_address          ??
       (userInfo as any).wallets?.[0]?.public_address    ??
+      (userInfo as any).wallet?.public_address          ??
       (userInfo as any).evm_address                     ??
       (userInfo as any).address                         ??
       "";
+    
     console.log("[OneShot] Extracted address:", addr);
+    console.log("[OneShot] userInfo structure:", JSON.stringify(userInfo, null, 2));
+    
     if (addr) {
       setLoading(false);
       setStep("email");
@@ -124,14 +129,31 @@ export function ParticleLoginButton({
         addr = result.wallets?.[0]?.public_address ?? "";
       }
       
-      // If no address from connect(), wait for userInfo to update
+      // If no address from connect(), try to get it from userInfo or getUserInfo
       if (!addr) {
-        console.log("[OneShot] No address from connect(), waiting for userInfo...");
+        console.log("[OneShot] No address from connect(), trying userInfo...");
         // Wait a bit for userInfo to update
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Try userInfo from hook
         if (userInfo) {
           addr = userInfo.wallets?.[0]?.public_address ?? "";
           console.log("[OneShot] Got address from userInfo:", addr);
+        }
+        
+        // If still no address, try getUserInfo from auth-core
+        if (!addr) {
+          try {
+            const { getUserInfo } = await import("@particle-network/auth-core");
+            const info = getUserInfo();
+            console.log("[OneShot] getUserInfo() result:", info);
+            if (info) {
+              addr = info.wallets?.[0]?.public_address ?? "";
+              console.log("[OneShot] Got address from getUserInfo():", addr);
+            }
+          } catch (e) {
+            console.error("[OneShot] Failed to get userInfo from auth-core:", e);
+          }
         }
       }
       
