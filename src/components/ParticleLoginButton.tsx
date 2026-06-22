@@ -118,7 +118,7 @@ export function ParticleLoginButton({
     try {
       // Triggers email OTP flow via auth-core-modal
       // (NOT using auth-core directly — see FIX #2)
-      await connect({ socialType: "email", email: email.trim() });
+      await connect({ email: email.trim() });
       // onSuccess fires from the useEffect above when userInfo updates
     } catch (e: any) {
       setLoading(false);
