@@ -16,7 +16,7 @@ const nextConfig = {
   // Without this, the SDK's module format causes "cannot use import statement"
   // errors in the server bundle.
   transpilePackages: [
-    "@particle-network/auth-core-modal",
+    "@particle-network/authkit",
     "@particle-network/auth-core",
     "@particle-network/universal-account-sdk",
   ],
