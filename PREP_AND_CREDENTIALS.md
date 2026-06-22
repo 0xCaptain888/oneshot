@@ -13,7 +13,7 @@ This is FILE 3 of 3 (`README.md` and `DEVELOPMENT.md` are the other two).
 |------------------|----------|
 | See the UI, click through all 3 flows, record a UI demo | **Nothing.** Just `npm install && npm run dev`. |
 | Do a **live** on-chain demo (real balances, real txns) | Particle keys + a funded wallet (Sections 1–3) |
-| Let the agent **explain** itself in natural language | An Anthropic API key (Section 4) |
+| Let the agent **explain** itself in natural language | A DeepSeek V4 API key (Section D) |
 | Submit to the hackathon | A GitHub repo + a deployed URL + a demo video (Section 6) |
 
 Gather things in this order: **A → B → C → D**. Each section says whether it's required or optional.
@@ -103,14 +103,14 @@ OneShot is designed so one codebase qualifies for several sponsor bounties. To i
 
 ---
 
-## D. Anthropic API key — *optional, agent explanations*
+## D. DeepSeek V4 API key — *optional, agent explanations*
 
 The agent works without it (deterministic rules + a built-in summary). Add a key only if you want the agent's report written in nicer natural language.
 
-1. Get a key at <https://console.anthropic.com> → API Keys.
+1. Get a key at <https://platform.deepseek.com> → API Keys.
 2. Add it to `.env.local` (server-only — **no** `NEXT_PUBLIC_` prefix):
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...
+DEEPSEEK_API_KEY=sk-...
 ```
 3. The app auto-detects it; the agent report will be tagged **"LLM-explained"** instead of "rules engine".
 
@@ -156,7 +156,7 @@ Leave them as-is unless you want tighter/looser limits. The user's in-app slider
 - [ ] (Optional) market contract address wired into `openPosition()`
 
 **Optional enhancers:**
-- [ ] `ANTHROPIC_API_KEY` for LLM agent explanations
+- [ ] `DEEPSEEK_API_KEY` for LLM agent explanations
 - [ ] Magic / ZeroDev / Openfort keys for deeper sponsor integrations
 
 **To submit:**
@@ -171,6 +171,6 @@ Leave them as-is unless you want tighter/looser limits. The user's in-app slider
 ## H. Security notes
 
 - **Never commit `.env.local`.** It's already in `.gitignore`.
-- Only `NEXT_PUBLIC_`-prefixed vars reach the browser. Keep secrets (Anthropic key, any sponsor *secret* keys, agent caps) **without** that prefix so they stay server-side.
+- Only `NEXT_PUBLIC_`-prefixed vars reach the browser. Keep secrets (DeepSeek key, any sponsor *secret* keys, agent caps) **without** that prefix so they stay server-side.
 - For a public demo, prefer **testnet** or tiny mainnet amounts. The agent's hard caps add a second layer of protection, but small balances are the simplest safety net.
 - Rotate any key that you ever paste into a screenshot or video.
