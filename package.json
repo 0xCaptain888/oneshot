@@ -2,7 +2,7 @@
   "name": "oneshot",
   "version": "1.0.0",
   "private": true,
-  "description": "OneShot \u2014 a chain-abstracted prediction & trading terminal. Fund from any chain in one click, take a position with one signature, hand execution to a scoped AI agent. Built for the UXmaxx Hackathon (7702 Collective / Particle Network).",
+  "description": "OneShot — a chain-abstracted prediction & trading terminal. Fund from any chain in one click, take a position with one signature, hand execution to a scoped AI agent. Built for the UXmaxx Hackathon (7702 Collective / Particle Network).",
   "license": "MIT",
   "scripts": {
     "dev": "next dev",
@@ -13,17 +13,20 @@
     "vercel-build": "next build"
   },
   "dependencies": {
+    "@ant-design/cssinjs": "^2.1.2",
+    "@ant-design/icons": "^6.2.5",
+    "@particle-network/auth-core": "1.5.2",
+    "@particle-network/auth-core-modal": "1.5.2",
+    "@particle-network/universal-account-sdk": "1.1.1",
+    "clsx": "^2.1.1",
+    "ethers": "^6.13.4",
+    "lucide-react": "^0.453.0",
     "next": "^14.2.33",
+    "rc-util": "^5.44.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "lucide-react": "^0.453.0",
-    "clsx": "^2.1.1",
     "tailwind-merge": "^2.5.4",
-    "zustand": "^5.0.0",
-    "ethers": "^6.13.4",
-    "@particle-network/auth-core-modal": "1.5.2",
-    "@particle-network/auth-core": "1.5.2",
-    "@particle-network/universal-account-sdk": "1.1.1"
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.16.11",
