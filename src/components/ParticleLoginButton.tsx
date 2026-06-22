@@ -24,18 +24,19 @@ import { ArrowRight, Mail } from "lucide-react";
 import { useParticleReady } from "@/lib/particle/authProvider";
 import { Button, Spinner } from "@/components/ui";
 import type { Address } from "@/types";
-import { getConnectCaptcha } from "@particle-network/auth-core";
 
 /* ── Hook loader ─────────────────────────────────────────────────────────── */
 
 type ConnectFn = (opts: Record<string, any>) => Promise<any>;
 type SendEmailCodeFn = (email: string) => Promise<void>;
+type RequestConnectCaptchaFn = (opts: { email: string }) => Promise<boolean>;
 
 interface ParticleHooks {
   useConnect: () => {
     connect: ConnectFn;
     disconnect: () => Promise<void>;
     sendEmailCode: SendEmailCodeFn;
+    requestConnectCaptcha: RequestConnectCaptchaFn;
   };
   useUserInfo: () => { userInfo: Record<string, any> | null | undefined };
 }
@@ -45,6 +46,7 @@ const noopHooks: ParticleHooks = {
     connect: async () => null,
     disconnect: async () => {},
     sendEmailCode: async () => {},
+    requestConnectCaptcha: async () => false,
   }),
   useUserInfo: () => ({ userInfo: null }),
 };
@@ -86,9 +88,9 @@ export function ParticleLoginButton({
   email, onSuccess, onError, loading, setLoading,
 }: Props) {
   // ✅ Hooks at TOP LEVEL of component — never inside callbacks
-  const { connect, sendEmailCode } = particleHooks.useConnect();
-  const { userInfo }               = particleHooks.useUserInfo();
-  const { ready }                  = useParticleReady();
+  const { connect, requestConnectCaptcha } = particleHooks.useConnect();
+  const { userInfo } = particleHooks.useUserInfo();
+  const { ready } = useParticleReady();
 
   const [step, setStep]   = useState<Step>("email");
   const [otp, setOtp]     = useState("");
@@ -112,7 +114,7 @@ export function ParticleLoginButton({
 
   /**
    * STEP 1 — send OTP email.
-   * Uses getConnectCaptcha() from @particle-network/auth-core (official API).
+   * Uses requestConnectCaptcha() from useConnect hook (official API).
    */
   const handleSendOtp = useCallback(async () => {
     if (!email || !email.includes("@")) {
@@ -127,8 +129,8 @@ export function ParticleLoginButton({
     setSending(true);
     onError("");          // clear any previous error
     try {
-      // Use official Particle API: getConnectCaptcha
-      const success = await getConnectCaptcha({ email: email.trim() });
+      // Use official Particle API: requestConnectCaptcha from useConnect hook
+      const success = await requestConnectCaptcha({ email: email.trim() });
       if (success) {
         setStep("otp");
       } else {
@@ -146,7 +148,7 @@ export function ParticleLoginButton({
     } finally {
       setSending(false);
     }
-  }, [email, ready, onError]);
+  }, [email, ready, requestConnectCaptcha, onError]);
 
   /**
    * STEP 2 — verify OTP and connect.
