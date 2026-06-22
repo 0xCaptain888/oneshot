@@ -50,13 +50,12 @@ export function useAuth() {
   const liveLogin = useCallback(async (userEmail: string) => {
     if (!particleAuthRef.connect) {
       throw new Error(
-        "Particle Auth not available. Is @particle-network/auth-core-modal installed?"
+        "Particle Auth not available。请确保 @particle-network/auth-core-modal 已正确安装。"
       );
     }
 
-    // Trigger email OTP flow
+    // Trigger email OTP flow - use email parameter (not socialType)
     const userInfo = await particleAuthRef.connect({
-      socialType: "email",
       email: userEmail,
     });
 
@@ -67,7 +66,7 @@ export function useAuth() {
       userInfo?.address ??
       "";
 
-    if (!addr) throw new Error("No wallet address returned from Particle Auth.");
+    if (!addr) throw new Error("Particle 认证未返回钱包地址。");
     setAuth({ email: userEmail, address: addr as Address });
   }, [setAuth]);
 

@@ -1,47 +1,33 @@
 "use client";
 
-/**
- * Particle Auth Provider wrapper.
- *
- * Wraps the app in AuthCoreContextProvider (from @particle-network/auth-core-modal)
- * so that useConnect / useUserInfo hooks work correctly at component level.
- *
- * Credentials:
- *   Project ID : 3b1fc10f-b2ea-48dc-ad62-6b20b2264fe0
- *   Client Key : crwCy0oYSHQzQnY6WNQRwGz9UO6bEI4e5l3z4yl1
- *   App ID     : 12039a72-9e05-4f0a-a949-57dd2ec46db7
- *
- * In MOCK mode this is a no-op passthrough — no Particle SDK loaded at all.
- */
-
-import React from "react";
-import { IS_MOCK, config } from "@/config";
-// @ts-ignore — Particle SDK has broken package.json exports field
-import { AuthCoreContextProvider } from "@particle-network/auth-core-modal";
-
-/** Arbitrum One chain definition for Particle SDK */
-const ARBITRUM_ONE = {
-  id: 42161,
-  name: "Arbitrum One",
-  network: "arbitrum",
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: { default: { http: ["https://arb1.arbitrum.io/rpc"] } },
-  blockExplorers: { default: { name: "Arbiscan", url: "https://arbiscan.io" } },
-};
+import React, { useEffect, useState } from "react";
+import { config } from "@/config";
 
 export function ParticleAuthProvider({ children }: { children: React.ReactNode }) {
-  if (IS_MOCK) {
-    // In mock mode: passthrough, no SDK
+  const [mounted, setMounted] = useState(false);
+  const [Provider, setProvider] = useState<React.ComponentType<any> | null>(null);
+
+  useEffect(() => {
+    // Only load Particle SDK on client side
+    setMounted(true);
+    
+    import("@particle-network/auth-core-modal").then((mod) => {
+      setProvider(() => mod.AuthCoreContextProvider);
+    }).catch((err) => {
+      console.error("Failed to load Particle SDK:", err);
+    });
+  }, []);
+
+  if (!mounted || !Provider) {
     return <>{children}</>;
   }
 
   return (
-    <AuthCoreContextProvider
+    <Provider
       options={{
         projectId: config.particle.projectId,
         clientKey: config.particle.clientKey,
         appId: config.particle.appId,
-        chains: [ARBITRUM_ONE],
         authTypes: ["email"],
         themeType: "dark",
         fiatCoin: "USD",
@@ -53,6 +39,6 @@ export function ParticleAuthProvider({ children }: { children: React.ReactNode }
       }}
     >
       {children}
-    </AuthCoreContextProvider>
+    </Provider>
   );
 }

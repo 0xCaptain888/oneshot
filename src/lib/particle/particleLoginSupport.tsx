@@ -1,30 +1,38 @@
 "use client";
 
-/**
- * ParticleLoginSupport — calls useConnect at the top level and exposes
- * the connect/disconnect functions via a global ref so useAuth can use them
- * imperatively (without violating React's rules of hooks).
- *
- * This component must be rendered inside AuthCoreContextProvider.
- * Only rendered in LIVE mode (see layout.tsx).
- */
-
-import { useEffect } from "react";
-// @ts-ignore — Particle SDK has broken package.json exports field
-import { useConnect } from "@particle-network/auth-core-modal";
+import { useEffect, useState } from "react";
 import { particleAuthRef } from "@/hooks/useAuth";
 
+/**
+ * This component calls useConnect at the top level and stores the functions in a global ref
+ * so useAuth can access them imperatively.
+ */
 export function ParticleLoginSupport() {
-  const { connect, disconnect } = useConnect();
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    particleAuthRef.connect = connect;
-    particleAuthRef.disconnect = disconnect;
-    return () => {
-      particleAuthRef.connect = null;
-      particleAuthRef.disconnect = null;
-    };
-  }, [connect, disconnect]);
+    let mounted = true;
+    
+    import("@particle-network/auth-core-modal").then((mod) => {
+      if (!mounted) return;
+      
+      // We need to call useConnect inside a component that's wrapped by AuthCoreContextProvider
+      // Since we can't call hooks conditionally, we'll use the connect function directly
+      // from the auth-core package
+      import("@particle-network/auth-core").then((authCore) => {
+        if (!mounted) return;
+        particleAuthRef.connect = authCore.connect;
+        particleAuthRef.disconnect = authCore.disconnect;
+        setReady(true);
+      });
+    }).catch((err) => {
+      console.error("Failed to load Particle SDK:", err);
+    });
 
-  return null; // This component renders nothing
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return null;
 }
