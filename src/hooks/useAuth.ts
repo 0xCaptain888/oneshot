@@ -53,10 +53,8 @@ export function useAuth() {
     if (!IS_MOCK) {
       // Import and call Particle disconnect imperatively (not a hook call)
       try {
-        // eslint-disable-next-line no-new-func
-        const mod = new Function("m", "return require(m)")("@particle-network/auth-core-modal");
-        const disconnectFn = mod?.disconnect ?? mod?.default?.disconnect;
-        if (typeof disconnectFn === "function") await disconnectFn();
+        const { disconnect: particleDisconnect } = await import("@particle-network/auth-core");
+        await particleDisconnect();
       } catch { /* ignore — always clear local state */ }
     }
     disconnect();
