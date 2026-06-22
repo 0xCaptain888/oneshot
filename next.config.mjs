@@ -23,10 +23,18 @@ const nextConfig = {
 
   webpack: (config, { isServer, webpack }) => {
     if (!isServer) {
-      // Map Node core modules to false in the browser bundle.
+      // Provide a stub for `fs` so Particle SDK's `fs.promises` destructuring
+      // doesn't crash in the browser (writeFile, readFile, etc.).
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(/^fs$/, (resource) => {
+          resource.request = require.resolve("./src/lib/fs-stub.js");
+        })
+      );
+
+      // Map other Node core modules to false in the browser bundle.
       config.resolve.fallback = {
         ...config.resolve.fallback,
-        fs: false, net: false, tls: false, child_process: false,
+        net: false, tls: false, child_process: false,
         crypto: false, stream: false, http: false, https: false,
         os: false, zlib: false, path: false, assert: false,
         util: false, url: false, querystring: false, worker_threads: false,
