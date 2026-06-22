@@ -1,18 +1,36 @@
 "use client";
 
+/**
+ * LoginScreen — entry point for authentication.
+ *
+ * MOCK mode : email input → mockLogin() → deterministic fake address (no SDK)
+ * LIVE mode : email input → <ParticleLoginButton> → real Particle OTP flow
+ *
+ * The IS_MOCK branch ensures:
+ * - In mock mode: zero Particle code runs, zero SDK loaded
+ * - In live mode: ParticleLoginButton holds useConnect/useUserInfo at its
+ *   own top level (the only correct React pattern for hooks)
+ *
+ * ParticleLoginButton is imported normally (not lazy) because:
+ * - Next.js tree-shakes it in mock builds via the IS_MOCK constant
+ * - The component itself handles SDK absence gracefully with no-op hooks
+ */
+
 import { useState } from "react";
 import { ArrowRight, Layers, MousePointerClick, Bot } from "lucide-react";
+import { IS_MOCK } from "@/config";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui";
-import { IS_MOCK } from "@/config";
+import type { Address } from "@/types";
+import { ParticleLoginButton } from "@/components/ParticleLoginButton";
 
 export function LoginScreen() {
-  const { login } = useAuth();
-  const [email, setEmail] = useState("");
+  const { mockLogin, confirmLiveAuth } = useAuth();
+  const [email, setEmail]     = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
 
-  async function handleLogin() {
+  async function handleMockLogin() {
     if (!email || !email.includes("@")) {
       setError("Enter a valid email to continue.");
       return;
@@ -20,18 +38,23 @@ export function LoginScreen() {
     setError(null);
     setLoading(true);
     try {
-      await login(email.trim());
+      await mockLogin(email.trim());
     } catch (e: any) {
-      setError(e?.message ?? "Login failed. Try again.");
+      setError(e?.message ?? "Login failed.");
     } finally {
       setLoading(false);
     }
   }
 
+  function handleLiveSuccess(addr: Address) {
+    confirmLiveAuth(email.trim(), addr);
+  }
+
   return (
     <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl flex-col items-center justify-center px-4 py-12">
       <div className="grid w-full items-center gap-12 lg:grid-cols-2">
-        {/* Left: hero copy */}
+
+        {/* Left: value proposition */}
         <div className="animate-fade-in">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent-soft px-3 py-1 text-xs font-medium text-accent">
             Powered by Universal Accounts + EIP-7702
@@ -44,11 +67,10 @@ export function LoginScreen() {
             </span>
           </h1>
           <p className="mt-5 max-w-md text-lg text-muted">
-            Fund from any chain in one click. Take a position with one signature.
-            Hand it to an agent. No bridges, no gas tokens, no chain switching —
-            ever.
+            Fund from any chain in one click. Take a position with one
+            signature. Hand it to an agent. No bridges, no gas tokens,
+            no chain switching — ever.
           </p>
-
           <ul className="mt-8 space-y-3">
             <Feature
               icon={<Layers className="h-5 w-5" />}
@@ -80,25 +102,39 @@ export function LoginScreen() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && IS_MOCK) handleMockLogin();
+            }}
             placeholder="you@example.com"
             className="mt-2 h-12 w-full rounded-xl border border-border bg-surface-2 px-4 text-base outline-none ring-accent/40 transition focus:ring-2"
           />
 
           {error && <p className="mt-3 text-sm text-danger">{error}</p>}
 
-          <Button
-            onClick={handleLogin}
-            loading={loading}
-            size="lg"
-            className="mt-5 w-full"
-          >
-            Continue <ArrowRight className="h-4 w-4" />
-          </Button>
+          {IS_MOCK ? (
+            /* MOCK: simple button, no Particle SDK needed */
+            <Button
+              onClick={handleMockLogin}
+              loading={loading}
+              size="lg"
+              className="mt-5 w-full"
+            >
+              Continue <ArrowRight className="h-4 w-4" />
+            </Button>
+          ) : (
+            /* LIVE: ParticleLoginButton owns useConnect/useUserInfo hooks */
+            <ParticleLoginButton
+              email={email}
+              onSuccess={handleLiveSuccess}
+              onError={(msg) => setError(msg)}
+              loading={loading}
+              setLoading={setLoading}
+            />
+          )}
 
           <p className="mt-4 text-center text-xs text-muted">
             {IS_MOCK
-              ? "Demo mode: any email works and all chain ops are simulated."
+              ? "Demo mode: any email works, all chain ops are simulated."
               : "We create a self-custodial Universal Account for you instantly."}
           </p>
         </div>
@@ -107,15 +143,7 @@ export function LoginScreen() {
   );
 }
 
-function Feature({
-  icon,
-  title,
-  body,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  body: string;
-}) {
+function Feature({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
   return (
     <li className="flex gap-3">
       <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-2 text-accent">

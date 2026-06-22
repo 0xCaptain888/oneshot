@@ -1,17 +1,18 @@
 "use client";
 
 /**
- * useAuth — login / logout hook.
+ * useAuth — thin state hook.
  *
- * In MOCK mode: any email → deterministic fake address (no SDK calls).
- * In LIVE mode: Particle email OTP → real embedded wallet address.
+ * In MOCK mode:  handles the full login/logout cycle here (no SDK needed).
+ * In LIVE mode:  login is handled by <ParticleLoginButton> (a component that
+ *                calls useConnect/useUserInfo at its own top level — the only
+ *                legal place for React hooks).
  *
- * The Particle hooks (useConnect) are called at the top level of the
- * ParticleLoginSupport component (rendered only in live mode), which
- * passes the connect function down via a global ref.
+ *                This hook just owns the Zustand state and the mock path.
+ *                logout() disconnects from Particle then clears state.
  */
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import type { Address } from "@/types";
 import { IS_MOCK } from "@/config";
 import { useStore } from "@/lib/store";
@@ -25,67 +26,49 @@ function mockAddressFromEmail(email: string): Address {
   return `0x${hex}${"a3f9c1e770bb42d5e9c8".repeat(2)}`.slice(0, 42) as Address;
 }
 
-/**
- * Global ref to hold the Particle connect/disconnect functions.
- * Set by ParticleLoginSupport component (which calls useConnect at top level).
- */
-export const particleAuthRef: {
-  connect: ((opts: any) => Promise<any>) | null;
-  disconnect: (() => Promise<void>) | null;
-} = { connect: null, disconnect: null };
-
-/** Mock login — used when IS_MOCK=true */
 export function useAuth() {
-  const setAuth = useStore((s) => s.setAuth);
+  const setAuth    = useStore((s) => s.setAuth);
   const disconnect = useStore((s) => s.disconnect);
-  const connected = useStore((s) => s.connected);
-  const email = useStore((s) => s.email);
-  const address = useStore((s) => s.address);
+  const connected  = useStore((s) => s.connected);
+  const email      = useStore((s) => s.email);
+  const address    = useStore((s) => s.address);
 
+  /**
+   * Mock login only. In live mode, <ParticleLoginButton> calls
+   * useConnect() at its top level and invokes setAuth() via onSuccess().
+   */
   const mockLogin = useCallback(async (userEmail: string) => {
     await sleep(700);
     setAuth({ email: userEmail, address: mockAddressFromEmail(userEmail) });
   }, [setAuth]);
 
-  const liveLogin = useCallback(async (userEmail: string) => {
-    if (!particleAuthRef.connect) {
-      throw new Error(
-        "Particle Auth not available。请确保 @particle-network/auth-core-modal 已正确安装。"
-      );
-    }
-
-    // Trigger email OTP flow - use email parameter (not socialType)
-    const userInfo = await particleAuthRef.connect({
-      email: userEmail,
-    });
-
-    // Extract the wallet address
-    const addr: string =
-      userInfo?.wallet?.public_address ??
-      userInfo?.wallets?.[0]?.public_address ??
-      userInfo?.address ??
-      "";
-
-    if (!addr) throw new Error("Particle 认证未返回钱包地址。");
-    setAuth({ email: userEmail, address: addr as Address });
+  /**
+   * setAuth is exposed so <ParticleLoginButton> can call it after OTP.
+   */
+  const confirmLiveAuth = useCallback((userEmail: string, addr: Address) => {
+    setAuth({ email: userEmail, address: addr });
   }, [setAuth]);
 
-  const login = useCallback(async (userEmail: string) => {
-    if (IS_MOCK) {
-      await mockLogin(userEmail);
-    } else {
-      await liveLogin(userEmail);
-    }
-  }, [mockLogin, liveLogin]);
-
   const logout = useCallback(async () => {
-    if (!IS_MOCK && particleAuthRef.disconnect) {
+    if (!IS_MOCK) {
+      // Import and call Particle disconnect imperatively (not a hook call)
       try {
-        await particleAuthRef.disconnect();
+        // eslint-disable-next-line no-new-func
+        const mod = new Function("m", "return require(m)")("@particle-network/auth-core-modal");
+        const disconnectFn = mod?.disconnect ?? mod?.default?.disconnect;
+        if (typeof disconnectFn === "function") await disconnectFn();
       } catch { /* ignore — always clear local state */ }
     }
     disconnect();
   }, [disconnect]);
 
-  return { login, logout, connected, email, address };
+  return {
+    mockLogin,
+    confirmLiveAuth,
+    logout,
+    connected,
+    email,
+    address,
+    IS_MOCK,
+  };
 }
