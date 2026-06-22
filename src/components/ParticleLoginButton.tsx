@@ -43,6 +43,7 @@ export function ParticleLoginButton({
 
   // When Particle OTP completes → userInfo is set → extract address
   useEffect(() => {
+    console.log("[OneShot] userInfo updated:", userInfo);
     if (!userInfo) return;
     const addr: string =
       (userInfo as any).wallet?.public_address          ??
@@ -50,6 +51,7 @@ export function ParticleLoginButton({
       (userInfo as any).evm_address                     ??
       (userInfo as any).address                         ??
       "";
+    console.log("[OneShot] Extracted address:", addr);
     if (addr) {
       setLoading(false);
       setStep("email");
@@ -110,13 +112,24 @@ export function ParticleLoginButton({
     setLoading(true);
     setStep("verifying");
     try {
-      // FIX: correct param shape for email OTP
-      // { email, code } — NOT { socialType: "email", email }
-      await connect({
+      const result = await connect({
         email: email.trim(),
         code,
       });
-      // onSuccess fires from useEffect above when userInfo updates
+      console.log("[OneShot] connect() result:", result);
+      // Try to extract address from connect() return value directly
+      const addr: string =
+        result?.wallet?.public_address          ??
+        result?.wallets?.[0]?.public_address    ??
+        result?.evm_address                     ??
+        result?.address                         ??
+        "";
+      if (addr) {
+        setLoading(false);
+        setStep("email");
+        onSuccess(addr as Address);
+      }
+      // If addr is empty, fall back to useEffect watching userInfo
     } catch (e: any) {
       setStep("otp");
       setLoading(false);
@@ -126,13 +139,12 @@ export function ParticleLoginButton({
       } else if (msg.includes("expired")) {
         onError("Code expired. Click 'Resend' to get a new one.");
       } else if (msg.includes("invalid connect param")) {
-        // Shouldn't happen with the correct params, but just in case
         onError("Auth error — please refresh the page and try again.");
       } else {
         onError(msg || "Verification failed. Please try again.");
       }
     }
-  }, [email, otp, connect, setLoading, onError]);
+  }, [email, otp, connect, setLoading, onError, onSuccess]);
 
   const handleResend = useCallback(async () => {
     setOtp("");
