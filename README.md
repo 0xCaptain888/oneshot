@@ -18,7 +18,7 @@
 
 <br />
 
-[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-oneshot--adgssky5l-0xcaptain888s--projects.vercel.app-7C5CFF?style=for-the-badge)](https://oneshot-adgssky5l-0xcaptain888s-projects.vercel.app)
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Click_to_Try-7C5CFF?style=for-the-badge)](https://oneshot-adgssky5l-0xcaptain888s-projects.vercel.app)
 &nbsp;
 [![Try Mock Mode](https://img.shields.io/badge/🎮_Try_Mock_Mode-No_wallet_needed-19C2B6?style=for-the-badge)](https://oneshot-adgssky5l-0xcaptain888s-projects.vercel.app)
 
