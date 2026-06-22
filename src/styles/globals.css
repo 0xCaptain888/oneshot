@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #0b0b14;
+  color: #f5f5fa;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  border-color: theme("colors.border");
+}
+
+/* Subtle radial glow behind the app. */
+.app-bg {
+  background:
+    radial-gradient(900px 600px at 80% -10%, rgba(124, 92, 255, 0.18), transparent 60%),
+    radial-gradient(700px 500px at 0% 10%, rgba(25, 194, 182, 0.10), transparent 55%),
+    #0b0b14;
+}
+
+/* Thin scrollbars in dark theme. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a2a3d;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Shimmer for skeleton loaders. */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.06),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.card {
+  @apply rounded-2xl border border-border bg-surface/80 backdrop-blur-sm;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+}
+.btn-primary {
+  @apply btn bg-accent text-white hover:bg-accent/90;
+}
+.btn-ghost {
+  @apply btn border border-border bg-surface-2 text-white hover:bg-surface-2/70;
+}
