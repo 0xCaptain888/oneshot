@@ -94,7 +94,7 @@ export class LiveUniversalAccount implements UniversalAccountService {
       amountInUSD: amountUsd,
       receiver: await this.getAddress(),
     });
-    const sent = await ua.signAndSendTransaction(tx);
+    const sent = await ua.sendTransaction(tx);
     const txHash: string = sent?.transactionId ?? sent?.hash ?? sent?.userOpHash ?? "";
     steps[1].status = "done"; steps[1].txHash = txHash;
     steps[2].status = "done"; steps[2].txHash = txHash;
@@ -146,7 +146,7 @@ export class LiveUniversalAccount implements UniversalAccountService {
         amountInUSD: args.stakeUsd,
       }],
     });
-    const sent = await ua.signAndSendTransaction(tx);
+    const sent = await ua.sendTransaction(tx);
     const txHash: string = sent?.transactionId ?? sent?.hash ?? sent?.userOpHash ?? "";
     steps[1].status = "done"; steps[2].status = "done"; steps[2].txHash = txHash;
     onStep([...steps]);
@@ -202,7 +202,7 @@ export class LiveUniversalAccount implements UniversalAccountService {
       chainId: config.primaryChainId,
       transactions,
     });
-    const sent = await ua.signAndSendTransaction(tx);
+    const sent = await ua.sendTransaction(tx);
     const txHash: string = sent?.transactionId ?? sent?.hash ?? sent?.userOpHash ?? "";
     steps[1].status = "done"; steps[2].status = "done"; steps[2].txHash = txHash;
     onStep([...steps]);
