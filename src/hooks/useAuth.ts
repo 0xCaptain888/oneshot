@@ -54,9 +54,14 @@ export function useAuth() {
       // Import and call Particle disconnect imperatively (not a hook call)
       try {
         const { disconnect: particleDisconnect } = await import("@particle-network/auth-core");
+        console.log("[OneShot] Calling Particle disconnect...");
         await particleDisconnect();
-      } catch { /* ignore — always clear local state */ }
+        console.log("[OneShot] Particle disconnect completed");
+      } catch (e) {
+        console.error("[OneShot] Particle disconnect failed:", e);
+      }
     }
+    console.log("[OneShot] Clearing Zustand state...");
     disconnect();
   }, [disconnect]);
 

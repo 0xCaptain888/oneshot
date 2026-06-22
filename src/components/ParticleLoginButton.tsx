@@ -16,6 +16,7 @@ import { useParticleReady } from "@/lib/particle/authProvider";
 import { Button, Spinner } from "@/components/ui";
 import type { Address } from "@/types";
 import { useConnect, useUserInfo } from "@particle-network/auth-core-modal";
+import { useStore } from "@/lib/store";
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 
@@ -36,6 +37,7 @@ export function ParticleLoginButton({
   const { connect, requestConnectCaptcha } = useConnect();
   const { userInfo } = useUserInfo();
   const { ready } = useParticleReady();
+  const connected = useStore((s) => s.connected);
 
   const [step, setStep]   = useState<Step>("email");
   const [otp, setOtp]     = useState("");
@@ -45,6 +47,12 @@ export function ParticleLoginButton({
   useEffect(() => {
     console.log("[OneShot] userInfo updated:", userInfo);
     if (!userInfo) return;
+    
+    // Don't re-trigger auth if already connected (prevents logout race condition)
+    if (connected) {
+      console.log("[OneShot] Already connected, skipping userInfo handler");
+      return;
+    }
     
     // Extract address from userInfo
     const addr: string =
@@ -62,7 +70,7 @@ export function ParticleLoginButton({
       setStep("email");
       onSuccess(addr as Address);
     }
-  }, [userInfo, onSuccess, setLoading]);
+  }, [userInfo, onSuccess, setLoading, connected]);
 
   /**
    * STEP 1 — send OTP email.
