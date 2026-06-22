@@ -117,36 +117,42 @@ export function ParticleLoginButton({
     setLoading(true);
     setStep("verifying");
     try {
+      console.log("[OneShot] Starting OTP verification...");
       const result = await connect({
         email: email.trim(),
         code,
       });
-      console.log("[OneShot] connect() result:", result);
+      console.log("[OneShot] connect() result:", JSON.stringify(result, null, 2));
       
       // Try to extract address from connect() return value
       let addr: string = "";
       if (result) {
         addr = result.wallets?.[0]?.public_address ?? "";
+        console.log("[OneShot] Address from connect():", addr);
       }
       
       // If no address from connect(), try to get it from userInfo or getUserInfo
       if (!addr) {
         console.log("[OneShot] No address from connect(), trying userInfo...");
         // Wait a bit for userInfo to update
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Try userInfo from hook
         if (userInfo) {
           addr = userInfo.wallets?.[0]?.public_address ?? "";
           console.log("[OneShot] Got address from userInfo:", addr);
+          console.log("[OneShot] userInfo structure:", JSON.stringify(userInfo, null, 2));
+        } else {
+          console.log("[OneShot] userInfo is null/undefined");
         }
         
         // If still no address, try getUserInfo from auth-core
         if (!addr) {
           try {
+            console.log("[OneShot] Trying getUserInfo from auth-core...");
             const { getUserInfo } = await import("@particle-network/auth-core");
             const info = getUserInfo();
-            console.log("[OneShot] getUserInfo() result:", info);
+            console.log("[OneShot] getUserInfo() result:", JSON.stringify(info, null, 2));
             if (info) {
               addr = info.wallets?.[0]?.public_address ?? "";
               console.log("[OneShot] Got address from getUserInfo():", addr);
@@ -158,6 +164,7 @@ export function ParticleLoginButton({
       }
       
       if (addr) {
+        console.log("[OneShot] Successfully extracted address:", addr);
         setLoading(false);
         setStep("email");
         onSuccess(addr as Address);
@@ -168,6 +175,7 @@ export function ParticleLoginButton({
         onError("Login successful but failed to get wallet address. Please try again.");
       }
     } catch (e: any) {
+      console.error("[OneShot] Error during OTP verification:", e);
       setStep("otp");
       setLoading(false);
       const msg: string = e?.message ?? String(e);
