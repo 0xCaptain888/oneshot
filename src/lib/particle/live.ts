@@ -80,7 +80,10 @@ export class LiveUniversalAccount implements UniversalAccountService {
   }
 
   async fundFromAnyChain(amountUsd: number, onStep: StepCallback): Promise<{ txHash: string }> {
+    console.log("[OneShot] Starting fundFromAnyChain with amount:", amountUsd);
     const ua = await this.init();
+    console.log("[OneShot] UniversalAccount initialized:", ua);
+    
     const steps: TxStep[] = [
       { id: "src",   label: "Locating your funds across chains", status: "active" },
       { id: "route", label: "Routing via Universal Account",     status: "pending" },
@@ -89,17 +92,32 @@ export class LiveUniversalAccount implements UniversalAccountService {
     ];
     onStep([...steps]);
     steps[0].status = "done"; steps[1].status = "active"; onStep([...steps]);
-    const tx = await ua.createTransferTransaction({
-      token: { chainId: config.primaryChainId, symbol: config.settlementToken },
-      amountInUSD: amountUsd,
-      receiver: await this.getAddress(),
-    });
-    const sent = await ua.sendTransaction(tx);
-    const txHash: string = sent?.transactionId ?? sent?.hash ?? sent?.userOpHash ?? "";
-    steps[1].status = "done"; steps[1].txHash = txHash;
-    steps[2].status = "done"; steps[2].txHash = txHash;
-    onStep([...steps]);
-    return { txHash };
+    
+    const receiver = await this.getAddress();
+    console.log("[OneShot] Receiver address:", receiver);
+    
+    try {
+      console.log("[OneShot] Creating transfer transaction...");
+      const tx = await ua.createTransferTransaction({
+        token: { chainId: config.primaryChainId, symbol: config.settlementToken },
+        amountInUSD: amountUsd,
+        receiver: receiver,
+      });
+      console.log("[OneShot] Transfer transaction created:", tx);
+      
+      console.log("[OneShot] Sending transaction...");
+      const sent = await ua.sendTransaction(tx);
+      console.log("[OneShot] Transaction sent:", sent);
+      
+      const txHash: string = sent?.transactionId ?? sent?.hash ?? sent?.userOpHash ?? "";
+      steps[1].status = "done"; steps[1].txHash = txHash;
+      steps[2].status = "done"; steps[2].txHash = txHash;
+      onStep([...steps]);
+      return { txHash };
+    } catch (error) {
+      console.error("[OneShot] Error in fundFromAnyChain:", error);
+      throw error;
+    }
   }
 
   async openPosition(
