@@ -16,9 +16,9 @@ export const config = {
   appUrl: env("NEXT_PUBLIC_APP_URL", "https://oneshot-seven-inky.vercel.app"),
 
   particle: {
-    projectId: env("NEXT_PUBLIC_PARTICLE_PROJECT_ID"),
-    clientKey: env("NEXT_PUBLIC_PARTICLE_CLIENT_KEY"),
-    appId: env("NEXT_PUBLIC_PARTICLE_APP_ID"),
+    projectId: env("NEXT_PUBLIC_PARTICLE_PROJECT_ID", "3b1fc10f-b2ea-48dc-ad62-6b20b2264fe0"),
+    clientKey: env("NEXT_PUBLIC_PARTICLE_CLIENT_KEY", "crwCy0oYSHQzQnY6WNQRwGz9UO6bEI4e5l3z4yl1"),
+    appId: env("NEXT_PUBLIC_PARTICLE_APP_ID", "12039a72-9e05-4f0a-a949-57dd2ec46db7"),
   },
 
   primaryChainId: Number(env("NEXT_PUBLIC_PRIMARY_CHAIN_ID", "42161")),
