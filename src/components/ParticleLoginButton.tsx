@@ -24,6 +24,7 @@ import { ArrowRight, Mail } from "lucide-react";
 import { useParticleReady } from "@/lib/particle/authProvider";
 import { Button, Spinner } from "@/components/ui";
 import type { Address } from "@/types";
+import { getConnectCaptcha } from "@particle-network/auth-core";
 
 /* ── Hook loader ─────────────────────────────────────────────────────────── */
 
@@ -111,8 +112,7 @@ export function ParticleLoginButton({
 
   /**
    * STEP 1 — send OTP email.
-   * Uses sendEmailCode(email) — NOT connect({ socialType: "email" }).
-   * socialType is only for OAuth social providers (Google, Twitter, etc).
+   * Uses getConnectCaptcha() from @particle-network/auth-core (official API).
    */
   const handleSendOtp = useCallback(async () => {
     if (!email || !email.includes("@")) {
@@ -127,8 +127,13 @@ export function ParticleLoginButton({
     setSending(true);
     onError("");          // clear any previous error
     try {
-      await sendEmailCode(email.trim());
-      setStep("otp");
+      // Use official Particle API: getConnectCaptcha
+      const success = await getConnectCaptcha({ email: email.trim() });
+      if (success) {
+        setStep("otp");
+      } else {
+        onError("Failed to send OTP. Please try again.");
+      }
     } catch (e: any) {
       const msg: string = e?.message ?? String(e);
       if (msg.includes("rate") || msg.includes("too many")) {
@@ -141,7 +146,7 @@ export function ParticleLoginButton({
     } finally {
       setSending(false);
     }
-  }, [email, ready, sendEmailCode, onError]);
+  }, [email, ready, onError]);
 
   /**
    * STEP 2 — verify OTP and connect.
