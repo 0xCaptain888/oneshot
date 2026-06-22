@@ -3,11 +3,20 @@
 /**
  * ParticleLoginButton — real two-step Particle email OTP flow.
  *
- * Using @particle-network/authkit v2.x
+ * The Particle SDK `connect()` function requires EXACTLY:
+ *   { email: string, code: string }   ← email OTP
+ *   { phone: string, code: string }   ← phone OTP
+ *   { socialType: string }            ← Google/Twitter etc (NOT for email)
+ *
+ * Passing { socialType: "email", email } causes "invalid connect param"
+ * because socialType is only for social OAuth providers.
  *
  * Correct two-step flow for email OTP:
- *   Step 1: requestConnectCaptcha({ email })  ← triggers OTP email
- *   Step 2: connect({ email, code })          ← verifies OTP + logs in
+ *   Step 1: sendEmailCode(email)          ← triggers OTP email
+ *   Step 2: connect({ email, code })      ← verifies OTP + logs in
+ *
+ * React hooks (useConnect, useUserInfo) are called at the TOP LEVEL
+ * of this component — the only legal place per React rules.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -15,7 +24,53 @@ import { ArrowRight, Mail } from "lucide-react";
 import { useParticleReady } from "@/lib/particle/authProvider";
 import { Button, Spinner } from "@/components/ui";
 import type { Address } from "@/types";
-import { useConnect, useAuthCore } from "@particle-network/authkit";
+
+/* ── Hook loader ─────────────────────────────────────────────────────────── */
+
+type ConnectFn = (opts: Record<string, any>) => Promise<any>;
+type SendEmailCodeFn = (email: string) => Promise<void>;
+type RequestConnectCaptchaFn = (opts: { email: string }) => Promise<boolean>;
+
+interface ParticleHooks {
+  useConnect: () => {
+    connect: ConnectFn;
+    disconnect: () => Promise<void>;
+    sendEmailCode: SendEmailCodeFn;
+    requestConnectCaptcha: RequestConnectCaptchaFn;
+  };
+  useUserInfo: () => { userInfo: Record<string, any> | null | undefined };
+}
+
+const noopHooks: ParticleHooks = {
+  useConnect: () => ({
+    connect: async () => null,
+    disconnect: async () => {},
+    sendEmailCode: async () => {},
+    requestConnectCaptcha: async () => false,
+  }),
+  useUserInfo: () => ({ userInfo: null }),
+};
+
+function loadParticleHooks(): ParticleHooks {
+  try {
+    // eslint-disable-next-line no-new-func, @typescript-eslint/no-require-imports
+    const mod = new Function("m", "return require(m)")("@particle-network/auth-core-modal");
+    if (!mod) return noopHooks;
+
+    const useConnect  = mod.useConnect  ?? mod.default?.useConnect;
+    const useUserInfo = mod.useUserInfo ?? mod.default?.useUserInfo;
+
+    if (typeof useConnect !== "function" || typeof useUserInfo !== "function") {
+      console.warn("[OneShot] Particle hooks not found in auth-core-modal v1.x.");
+      return noopHooks;
+    }
+    return { useConnect, useUserInfo };
+  } catch {
+    return noopHooks;
+  }
+}
+
+const particleHooks = loadParticleHooks();
 
 /* ── Component ───────────────────────────────────────────────────────────── */
 
@@ -33,8 +88,8 @@ export function ParticleLoginButton({
   email, onSuccess, onError, loading, setLoading,
 }: Props) {
   // ✅ Hooks at TOP LEVEL of component — never inside callbacks
-  const { connect, disconnect, requestConnectCaptcha } = useConnect();
-  const { userInfo } = useAuthCore();
+  const { connect, requestConnectCaptcha } = particleHooks.useConnect();
+  const { userInfo } = particleHooks.useUserInfo();
   const { ready } = useParticleReady();
 
   const [step, setStep]   = useState<Step>("email");
@@ -207,6 +262,6 @@ export function ParticleLoginButton({
 
 /** Logout hook — at component top level, per React rules */
 export function useParticleDisconnect() {
-  const { disconnect } = useConnect();
+  const { disconnect } = particleHooks.useConnect();
   return disconnect;
 }
